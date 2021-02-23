@@ -5,6 +5,9 @@ const ejs = require('ejs');
 const User = require('./models/user');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const session = require('express-session');
+
+const sessionConfig = { secret: 'Wach secret', resave: 'false', saveUninitialized: 'false' };
 
 mongoose.connect('mongodb://localhost:27017/auth-demo', {
     useNewUrlParser: true,
@@ -23,9 +26,16 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'))
 
 app.use(express.urlencoded({ extended: true }));
+app.use(session(sessionConfig));
+
+const requireLogin = (req, res, next) => {
+    if (!req.session.user_id) {
+        return res.redirect('/login');
+    }
+    next();
+}
 
 app.get('/', (req, res) => {
-    const username = req.body.username;
     res.send(`Added a user to db`);
 });
 
@@ -41,10 +51,17 @@ app.post('/login', async (req, res) => {
     const user = await User.findOne({ username: username });
     const valadateUser = await bcrypt.compare(password, user.password);
     if (valadateUser) {
-        res.send(`You're welcome ${username}`);
-    } else (
-        res.send('Userame or password incorrect')
-    )
+        req.session.user_id = user._id;
+        res.redirect('/secret');
+        // res.send(`You're welcome ${username}`);
+    } else {
+        res.redirect('/login');
+    }
+})
+
+app.post('/logout', (req, res) => {
+    req.session.user_id = null;
+    res.redirect('/login');
 })
 
 app.post('/register', async (req, res) => {
@@ -55,11 +72,16 @@ app.post('/register', async (req, res) => {
         password: hash
     });
     await user.save();
+    req.session.user_id = user._id;
     res.redirect('/');
 })
 
-app.get('/secret', (req, res) => {
-    res.send('This is SECRET!');
+app.get('/secret', requireLogin, (req, res) => {
+    res.render('secret');
+})
+
+app.get('/topsecret', requireLogin, (req, res) => {
+    res.send('This is topsecret');
 })
 
 app.listen(2000, () => {
