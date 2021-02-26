@@ -48,11 +48,10 @@ app.get('/register', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
-    const user = await User.findOne({ username: username });
-    const valadateUser = await bcrypt.compare(password, user.password);
-    if (valadateUser) {
-        req.session.user_id = user._id;
-        res.redirect('/secret');
+    const foundUser = await User.findAndValidate(username, password);
+    if (foundUser) {
+        req.session.user_id = foundUser._id;
+        return res.redirect('/secret');
         // res.send(`You're welcome ${username}`);
     } else {
         res.redirect('/login');
@@ -66,10 +65,8 @@ app.post('/logout', (req, res) => {
 
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
-    const hash = await bcrypt.hash(password, 12);
     const user = new User({
-        username: username,
-        password: hash
+        username, password
     });
     await user.save();
     req.session.user_id = user._id;
