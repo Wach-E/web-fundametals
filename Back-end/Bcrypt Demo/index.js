@@ -10,5 +10,5 @@ const login = async (pw, hashedPw) => {
     }
 }
 
-// replace hashKey elow with the hash gotten from hash.js
+// replace hashKey below with the hash gotten from hash.js
 login('hello', hashKey);
